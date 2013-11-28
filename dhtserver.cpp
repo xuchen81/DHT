@@ -138,6 +138,7 @@ void DHTServer::receiveMessage() {
         qDebug() << receivedMessageMap;
 
         if (receivedMessageMap.contains("JoinRequest")) {
+            /* If a DHTServer receives a join request. */
             qDebug() << "I got a join request";
 
             quint64 fromId= receivedMessageMap["ServerId"].toUInt();
@@ -156,17 +157,39 @@ void DHTServer::receiveMessage() {
                 QString succOriginDisplay = QString("Origin:%1").arg(successor["Origin"].toString());
                 QString succHashIdDisplay = QString("HashId:%1").arg(successor["HashId"].toString());
                 QString succServerIdDisplay = QString("ServerId:%1").arg(successor["ServerId"].toString());
+                successorDisplay->clear();
                 successorDisplay->append(succOriginDisplay);
                 successorDisplay->append(succHashIdDisplay);
                 successorDisplay->append(succServerIdDisplay);
 
+                QVariantMap predNotif;
+                predNotif["SuccessorNotif"] = true;
+                predNotif["Origin"] = localOrigin;
+                predNotif["HashId"] = hashId;
+                predNotif["ServerId"] = serverId;
+
+                QStringList list = receivedMessageMap["Origin"].toString().split(":");
+                sendMessage(predNotif, QHostAddress(list[0]), list[1].toInt());
             } else {
                 /* Not the right place, forwarding the join request to its successor. */
                 QString successorOrigin = successors[0]["Origin"].toString();
                 QStringList list = successorOrigin.split(":");
                 sendMessage(receivedMessageMap, QHostAddress(list[0]), list[1].toInt());
             }
+        } else if (receivedMessageMap.contains("SuccessorNotif")) {
+            QVariantMap predecessor;
+            predecessor["Origin"] = receivedMessageMap["Origin"];
+            predecessor["HashId"] = receivedMessageMap["HashId"];
+            predecessor["ServerId"] = receivedMessageMap["ServerId"];
+            predecessors.append(predecessor);
 
+            QString predOriginDisplay = QString("Origin:%1").arg(predecessor["Origin"].toString());
+            QString predHashIdDisplay = QString("HashId:%1").arg(predecessor["HashId"].toString());
+            QString predServerIdDisplay = QString("ServerId:%1").arg(predecessor["ServerId"].toString());
+            predecessorDisplay->clear();
+            predecessorDisplay->append(predOriginDisplay);
+            predecessorDisplay->append(predHashIdDisplay);
+            predecessorDisplay->append(predServerIdDisplay);
         }
     }
 
