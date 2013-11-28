@@ -4,17 +4,17 @@
 
 int main(int argc, char *argv[])
 {
-	QCA::Initializer qcainit;
+    QCA::Initializer qcainit;
     QApplication a(argc, argv);
     DHTServer w;
 
     NetSocket *sock = new NetSocket();
 
     if (!sock->bind()) {
-		exit(1);
-	} else {
+        exit(1);
+    } else {
         w.bindNetSocket(sock);
-	}
+    }
 
     w.show();
     
