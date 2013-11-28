@@ -100,7 +100,33 @@ void DHTServer::bindNetSocket(NetSocket *ns) {
     setWindowTitle(localOrigin);
 }
 
+void DHTServer::sendMessage(QVariantMap m, QHostAddress ip, quint16 prt) {
+    QByteArray data;
+    QDataStream *stream = new QDataStream(&data, QIODevice::WriteOnly);
+    (*stream) << m;
+    netSocket->writeDatagram(data.data(), data.size(), ip, prt);
+}
+
 void DHTServer::receiveMessage() {
+    while (netSocket->hasPendingDatagrams()) {
+        QByteArray datagram;
+        datagram.resize(netSocket->pendingDatagramSize());
+        QHostAddress sender;
+        quint16 senderPort;
+        netSocket->readDatagram(datagram.data(), datagram.size(), &sender, &senderPort);
+        
+        QVariantMap receivedMessageMap;
+        QDataStream *stream = new QDataStream(&datagram, QIODevice::ReadOnly);
+        (*stream) >> receivedMessageMap;
+        delete stream;
+
+        qDebug() << receivedMessageMap;
+
+        if (receivedMessageMap.contains("JoinRequest")) {
+            qDebug() << "I got a join request";
+
+        }
+    }
 
 }
 
@@ -150,6 +176,13 @@ void DHTServer::lookedupHandler(const QHostInfo &host) {
     QString ip = host.addresses().first().toString();
     qDebug() << "Found address:" << ip;
     hostHunter->ipAddr = ip;
+
+    QVariantMap joinMessage;
+    joinMessage["JoinRequest"] = true;
+    joinMessage["Origin"] = localOrigin;
+    joinMessage["HashId"] = hashId;
+    joinMessage["ServerId"] = serverId;
+    sendMessage(joinMessage, QHostAddress(hostHunter->ipAddr), hostHunter->port);
 
     /*
     QVariantMap peer;

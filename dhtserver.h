@@ -58,23 +58,22 @@ public slots:
     void nodeJoinBtnClickedHandler();
     void lookedupHandler(const QHostInfo &host);
     void receiveMessage();
+    void sendMessage(QVariantMap m, QHostAddress ip, quint16 p);
 
     
 private:
     Ui::DHTServer *ui;
     HostNameLookup *hostHunter;
 
+    /* UI elements */
     QLabel *keyValEnterLabel;
     QLineEdit *keyInsertInput;
     QLineEdit *valInsertInput;
     QPushButton *insertBtn;
-
     QLineEdit *nodeEnterInput;
     QPushButton *nodeJoinBtn;
-
     QLineEdit *keySearchInput;
     QLineEdit *valDisplay;
-
     QPushButton *keySearchBtn;
 
 
