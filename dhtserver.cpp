@@ -85,13 +85,19 @@ void DHTServer::bindNetSocket(NetSocket *ns) {
 
     localOrigin = QString("%1:%2").arg(ip).arg(netSocket->bindedPort);
 
+    QByteArray byteArray;
+    byteArray.append(localOrigin.toUtf8());
+    QByteArray h = QCA::Hash("md5").hash(byteArray).toByteArray();
+    hashId = h.toHex();
+
+    qDebug() << localOrigin << "has been MD5 hashed into HashId: " << hashId;
 
     connect(netSocket, SIGNAL(readyRead()), this, SLOT(receiveMessage()));
     setWindowTitle(localOrigin);
 }
 
 void DHTServer::receiveMessage() {
-    
+
 }
 
 
@@ -118,9 +124,6 @@ void DHTServer::keyValInsertionHandler() {
     QString key = keyInsertInput->text().simplified();
     QString val = valInsertInput->text().simplified();
 
-    QString haha = QCA::Hash("md5").hashToString("xuchen81");
-
-    qDebug() << haha;
     if (key == "" || val == "") {
         return;
     }

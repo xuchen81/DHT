@@ -49,6 +49,7 @@ public:
     NetSocket *netSocket;
     void bindNetSocket(NetSocket *netSocket);
     QString localOrigin;
+    QString hashId;
 
 
 public slots:
