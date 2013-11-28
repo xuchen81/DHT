@@ -77,6 +77,12 @@ private:
     QPushButton *keySearchBtn;
 
 
+    QList<QVariantMap> predecessors;
+    QList<QVariantMap> successors;
+
+
+
+
 
 };
 
