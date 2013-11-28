@@ -9,7 +9,11 @@ INCLUDEPATH += .
 QT += network
 
 # Input
-HEADERS += dhtserver.h
+HEADERS += dhtserver.h \
+    netsocket.h \
+    util.h
 FORMS += dhtserver.ui
-SOURCES += dhtserver.cpp main.cpp
+SOURCES += dhtserver.cpp main.cpp \
+    netsocket.cpp \
+    util.cpp
 CONFIG += crypto
