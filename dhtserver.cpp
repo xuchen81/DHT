@@ -163,20 +163,29 @@ void DHTServer::receiveMessage() {
                 successorDisplay->append(succServerIdDisplay);
 
                 QVariantMap predNotif;
-                predNotif["SuccessorNotif"] = true;
+                predNotif["PredecessorNotif"] = true;
                 predNotif["Origin"] = localOrigin;
                 predNotif["HashId"] = hashId;
                 predNotif["ServerId"] = serverId;
 
                 QStringList list = receivedMessageMap["Origin"].toString().split(":");
                 sendMessage(predNotif, QHostAddress(list[0]), list[1].toInt());
+
+                if (predecessors.isEmpty()) {
+                    QVariantMap predecessor = successor;
+                    predecessors.append(successor);
+                    predecessorDisplay->clear();
+                    predecessorDisplay->append(succOriginDisplay);
+                    predecessorDisplay->append(succHashIdDisplay);
+                    predecessorDisplay->append(succServerIdDisplay);
+                }
             } else {
                 /* Not the right place, forwarding the join request to its successor. */
                 QString successorOrigin = successors[0]["Origin"].toString();
                 QStringList list = successorOrigin.split(":");
                 sendMessage(receivedMessageMap, QHostAddress(list[0]), list[1].toInt());
             }
-        } else if (receivedMessageMap.contains("SuccessorNotif")) {
+        } else if (receivedMessageMap.contains("PredecessorNotif")) {
             QVariantMap predecessor;
             predecessor["Origin"] = receivedMessageMap["Origin"];
             predecessor["HashId"] = receivedMessageMap["HashId"];
@@ -190,6 +199,16 @@ void DHTServer::receiveMessage() {
             predecessorDisplay->append(predOriginDisplay);
             predecessorDisplay->append(predHashIdDisplay);
             predecessorDisplay->append(predServerIdDisplay);
+
+            if (successors.isEmpty()) {
+                QVariantMap successor = predecessor;
+                successors.append(successor);
+                successorDisplay->clear();
+                successorDisplay->append(predOriginDisplay);
+                successorDisplay->append(predHashIdDisplay);
+                successorDisplay->append(predServerIdDisplay);
+            }
+
         }
     }
 
