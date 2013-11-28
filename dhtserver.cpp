@@ -69,10 +69,6 @@ DHTServer::DHTServer(QWidget *parent) :
     keySearchGroup->setLayout(keySearchLayout);
 
 
-
-
-
-
     QGridLayout *layout = new QGridLayout(this);
     layout->addWidget(keyValEnterGroup, 0, 0);
     layout->addWidget(nodeEnterGroup, 1, 0);
@@ -104,6 +100,9 @@ void DHTServer::keyValInsertionHandler() {
     QString key = keyInsertInput->text().simplified();
     QString val = valInsertInput->text().simplified();
 
+    QString haha = QCA::Hash("md5").hashToString("xuchen81");
+
+    qDebug() << haha;
     if (key == "" || val == "") {
         return;
     }
