@@ -134,9 +134,17 @@ void DHTServer::receiveMessage() {
                 (fromId > serverId && fromId < successors[0]["ServerId"].toUInt()) ||
                 (fromId > serverId && fromId > successors[0]["ServerId"].toUInt() && serverId < successors[0]["ServerId"].toUInt())) {
 
-                // right place
+                /* Joining DHTServer has found the right place. */
+                QVariantMap successor;
+                successor["Origin"] = receivedMessageMap["Origin"];
+                successor["HashId"] = receivedMessageMap["HashId"];
+                successor["ServerId"] = receivedMessageMap["ServerId"];
+                successors.append(successor);
             } else {
-                // forward message to successor
+                /* Not the right place, forwarding the join request to its successor. */
+                QString successorOrigin = successors[0]["Origin"].toString();
+                QStringList list = successorOrigin.split(":");
+                sendMessage(receivedMessageMap, QHostAddress(list[0]), list[1].toInt());
             }
 
         }
@@ -157,7 +165,7 @@ void DHTServer::nodeJoinBtnClickedHandler() {
     }
 
     QString host = list[0];
-    int port = list[1].toInt();
+    quint16 port = list[1].toInt();
     hostHunter = new HostNameLookup(port);
 
     QHostInfo::lookupHost(host, this, SLOT(lookedupHandler(QHostInfo)));
