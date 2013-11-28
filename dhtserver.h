@@ -75,6 +75,7 @@ private:
     QLineEdit *keySearchInput;
     QLineEdit *valDisplay;
     QPushButton *keySearchBtn;
+    QTextEdit *successorDisplay;
 
 
     QList<QVariantMap> predecessors;

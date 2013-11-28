@@ -25,7 +25,6 @@ DHTServer::DHTServer(QWidget *parent) :
     valInsertInput = new QLineEdit(this);
     insertBtn = new QPushButton("Insert", this);
     connect(insertBtn, SIGNAL(clicked()), this, SLOT(keyValInsertionHandler()));
-
     QGridLayout *keyValLayout = new QGridLayout;
     keyValLayout->addWidget(keyLabel, 0, 0);
     keyValLayout->addWidget(keyInsertInput, 0, 1);
@@ -40,7 +39,6 @@ DHTServer::DHTServer(QWidget *parent) :
     nodeEnterInput = new QLineEdit(this);
     nodeJoinBtn = new QPushButton("Join", this);
     connect(nodeJoinBtn, SIGNAL(clicked()), this, SLOT(nodeJoinBtnClickedHandler()));
-
     QGridLayout *nodeEnterLayout = new QGridLayout;
     nodeEnterLayout->addWidget(nodeEnterLabel, 0, 0);
     nodeEnterLayout->addWidget(nodeEnterInput, 0, 1);
@@ -54,13 +52,10 @@ DHTServer::DHTServer(QWidget *parent) :
     QLabel *valFoundLabel = new QLabel("Val:", this);
     valDisplay = new QLineEdit(this);
     valDisplay->setReadOnly(true);
-
     QPalette p = valDisplay->palette();
     p.setColor(QPalette::Base, QColor(240, 240, 255));
     valDisplay->setPalette(p);
-
     keySearchBtn = new QPushButton("Search");
-
     QGridLayout *keySearchLayout = new QGridLayout;
     keySearchLayout->addWidget(keySearchLabel, 0, 0);
     keySearchLayout->addWidget(keySearchInput, 0, 1);
@@ -69,11 +64,19 @@ DHTServer::DHTServer(QWidget *parent) :
     keySearchLayout->addWidget(keySearchBtn, 2, 0, 1, 2);
     keySearchGroup->setLayout(keySearchLayout);
 
+    QGroupBox *successorGroup = new QGroupBox(tr("Successors"));
+    successorDisplay = new QTextEdit(this);
+    successorDisplay->setReadOnly(true);
+    QGridLayout *successorDisplayLayout = new QGridLayout;
+    successorDisplayLayout->addWidget(successorDisplay, 0, 0);
+    successorGroup->setLayout(successorDisplayLayout);
+
 
     QGridLayout *layout = new QGridLayout(this);
     layout->addWidget(keyValEnterGroup, 0, 0);
     layout->addWidget(nodeEnterGroup, 1, 0);
     layout->addWidget(keySearchGroup, 2, 0);
+    layout->addWidget(successorGroup, 0, 1);
 
     setLayout(layout);
 }
