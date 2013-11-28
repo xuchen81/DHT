@@ -6,6 +6,7 @@
 #include <netinet/udp.h>
 
 #include "dhtserver.h"
+#include "util.h"
 #include "ui_dhtserver.h"
 
 HostNameLookup::HostNameLookup(quint16 p) {
@@ -88,9 +89,12 @@ void DHTServer::bindNetSocket(NetSocket *ns) {
     QByteArray byteArray;
     byteArray.append(localOrigin.toUtf8());
     QByteArray h = QCA::Hash("md5").hash(byteArray).toByteArray();
-    hashId = h.toHex();
+    QString md5re = h.toHex();
+    hashId = Util::construct32bitsHashId(md5re);
 
-    qDebug() << localOrigin << "has been MD5 hashed into HashId: " << hashId;
+    bool ok;
+    serverId = hashId.toUInt(&ok,16);
+    qDebug() << localOrigin << " MD5'ed into HashId: " << hashId << " serverId: " << serverId;
 
     connect(netSocket, SIGNAL(readyRead()), this, SLOT(receiveMessage()));
     setWindowTitle(localOrigin);

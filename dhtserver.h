@@ -50,6 +50,7 @@ public:
     void bindNetSocket(NetSocket *netSocket);
     QString localOrigin;
     QString hashId;
+    quint64 serverId;
 
 
 public slots:
