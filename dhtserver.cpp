@@ -126,9 +126,6 @@ void DHTServer::receiveMessage() {
             qDebug() << "I got a join request";
 
             quint64 fromId= receivedMessageMap["ServerId"].toUInt();
-            quint64 successorServerId = -1;
-
-
 
             if (successors.isEmpty() ||
                 (fromId > serverId && fromId < successors[0]["ServerId"].toUInt()) ||
