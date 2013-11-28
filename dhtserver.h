@@ -1,6 +1,7 @@
 #ifndef DHTSERVER_H
 #define DHTSERVER_H
 
+#include "netsocket.h"
 #include <QDialog>
 #include <QTextEdit>
 #include <QLineEdit>
@@ -45,11 +46,16 @@ class DHTServer : public QDialog
 public:
     explicit DHTServer(QWidget *parent = 0);
     ~DHTServer();
+    NetSocket *netSocket;
+    void bindNetSocket(NetSocket *netSocket);
+    QString localOrigin;
+
 
 public slots:
     void keyValInsertionHandler();
     void nodeJoinBtnClickedHandler();
     void lookedupHandler(const QHostInfo &host);
+    void receiveMessage();
 
     
 private:

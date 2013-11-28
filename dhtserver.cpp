@@ -77,6 +77,24 @@ DHTServer::DHTServer(QWidget *parent) :
     setLayout(layout);
 }
 
+void DHTServer::bindNetSocket(NetSocket *ns) {
+    netSocket = ns;
+
+    QHostInfo info = QHostInfo::fromName(QHostInfo::localHostName());
+    QString ip = info.addresses().first().toString();
+
+    localOrigin = QString("%1:%2").arg(ip).arg(netSocket->bindedPort);
+
+
+    connect(netSocket, SIGNAL(readyRead()), this, SLOT(receiveMessage()));
+    setWindowTitle(localOrigin);
+}
+
+void DHTServer::receiveMessage() {
+    
+}
+
+
 void DHTServer::nodeJoinBtnClickedHandler() {
     QHostInfo info = QHostInfo::fromName(QHostInfo::localHostName());
     qDebug() <<"IP Address: "<<info.addresses();

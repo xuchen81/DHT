@@ -8,7 +8,13 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
     DHTServer w;
 
-    NetSocket *socket = new NetSocket();
+    NetSocket *sock = new NetSocket();
+
+    if (!sock->bind()) {
+		exit(1);
+	} else {
+        w.bindNetSocket(sock);
+	}
 
     w.show();
     
