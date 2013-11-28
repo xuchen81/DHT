@@ -76,14 +76,11 @@ private:
     QLineEdit *valDisplay;
     QPushButton *keySearchBtn;
     QTextEdit *successorDisplay;
+    QTextEdit *predecessorDisplay;
 
 
     QList<QVariantMap> predecessors;
     QList<QVariantMap> successors;
-
-
-
-
 
 };
 

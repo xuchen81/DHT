@@ -67,9 +67,20 @@ DHTServer::DHTServer(QWidget *parent) :
     QGroupBox *successorGroup = new QGroupBox(tr("Successors"));
     successorDisplay = new QTextEdit(this);
     successorDisplay->setReadOnly(true);
+    successorDisplay->setFixedHeight(80);
+    successorDisplay->setFixedWidth(200);
     QGridLayout *successorDisplayLayout = new QGridLayout;
     successorDisplayLayout->addWidget(successorDisplay, 0, 0);
     successorGroup->setLayout(successorDisplayLayout);
+
+    QGroupBox *predecessorGroup = new QGroupBox(tr("Predecessors"));
+    predecessorDisplay = new QTextEdit(this);
+    predecessorDisplay->setReadOnly(true);
+    predecessorDisplay->setFixedHeight(80);
+    predecessorDisplay->setFixedWidth(200);
+    QGridLayout *predecessorDisplayLayout = new QGridLayout;
+    predecessorDisplayLayout->addWidget(predecessorDisplay, 0, 0);
+    predecessorGroup->setLayout(predecessorDisplayLayout);
 
 
     QGridLayout *layout = new QGridLayout(this);
@@ -77,6 +88,7 @@ DHTServer::DHTServer(QWidget *parent) :
     layout->addWidget(nodeEnterGroup, 1, 0);
     layout->addWidget(keySearchGroup, 2, 0);
     layout->addWidget(successorGroup, 0, 1);
+    layout->addWidget(predecessorGroup, 1, 1);
 
     setLayout(layout);
 }
@@ -140,6 +152,14 @@ void DHTServer::receiveMessage() {
                 successor["HashId"] = receivedMessageMap["HashId"];
                 successor["ServerId"] = receivedMessageMap["ServerId"];
                 successors.append(successor);
+
+                QString succOriginDisplay = QString("Origin:%1").arg(successor["Origin"].toString());
+                QString succHashIdDisplay = QString("HashId:%1").arg(successor["HashId"].toString());
+                QString succServerIdDisplay = QString("ServerId:%1").arg(successor["ServerId"].toString());
+                successorDisplay->append(succOriginDisplay);
+                successorDisplay->append(succHashIdDisplay);
+                successorDisplay->append(succServerIdDisplay);
+
             } else {
                 /* Not the right place, forwarding the join request to its successor. */
                 QString successorOrigin = successors[0]["Origin"].toString();
