@@ -178,6 +178,9 @@ void DHTServer::receiveMessage() {
                     predecessorDisplay->append(succOriginDisplay);
                     predecessorDisplay->append(succHashIdDisplay);
                     predecessorDisplay->append(succServerIdDisplay);
+                } else {
+                    // Todo
+
                 }
             } else {
                 /* Not the right place, forwarding the join request to its successor. */
