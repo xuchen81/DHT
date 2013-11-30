@@ -135,19 +135,34 @@ void DHTServer::receiveMessage() {
         (*stream) >> receivedMessageMap;
         delete stream;
 
-        qDebug() << receivedMessageMap;
-
         if (receivedMessageMap.contains("JoinRequest")) {
             /* If a DHTServer receives a join request. */
             qDebug() << "I got a join request";
 
-            quint64 fromId= receivedMessageMap["ServerId"].toUInt();
+            quint64 fromId = receivedMessageMap["ServerId"].toUInt();
 
             if (successors.isEmpty() ||
                 (fromId > serverId && fromId < successors[0]["ServerId"].toUInt()) ||
                 (fromId > serverId && fromId > successors[0]["ServerId"].toUInt() && serverId < successors[0]["ServerId"].toUInt())) {
 
                 /* Joining DHTServer has found the right place. */
+
+                if (!successors.isEmpty()) {
+                    // send updating pred message to old succ
+
+                    QVariantMap oldSuccessor = successors[0];
+                    QVariantMap updatePredMessage;
+
+                    updatePredMessage["UpdatePredRequest"] = true;
+                    updatePredMessage["Origin"] = receivedMessageMap["Origin"];
+                    updatePredMessage["HashId"] = receivedMessageMap["HashId"];
+                    updatePredMessage["ServerId"] = receivedMessageMap["ServerId"];
+
+                    QStringList list = oldSuccessor["Origin"].toString().split(":");
+                    sendMessage(updatePredMessage, QHostAddress(list[0]), list[1].toInt());
+                    successors.clear();
+                }
+
                 QVariantMap successor;
                 successor["Origin"] = receivedMessageMap["Origin"];
                 successor["HashId"] = receivedMessageMap["HashId"];
@@ -163,7 +178,7 @@ void DHTServer::receiveMessage() {
                 successorDisplay->append(succServerIdDisplay);
 
                 QVariantMap predNotif;
-                predNotif["PredecessorNotif"] = true;
+                predNotif["UpdatePredRequest"] = true;
                 predNotif["Origin"] = localOrigin;
                 predNotif["HashId"] = hashId;
                 predNotif["ServerId"] = serverId;
@@ -178,21 +193,21 @@ void DHTServer::receiveMessage() {
                     predecessorDisplay->append(succOriginDisplay);
                     predecessorDisplay->append(succHashIdDisplay);
                     predecessorDisplay->append(succServerIdDisplay);
-                } else {
-                    // Todo
-
                 }
             } else {
                 /* Not the right place, forwarding the join request to its successor. */
+
+                qDebug() << "Forwarding join request ! " << endl;
                 QString successorOrigin = successors[0]["Origin"].toString();
                 QStringList list = successorOrigin.split(":");
                 sendMessage(receivedMessageMap, QHostAddress(list[0]), list[1].toInt());
             }
-        } else if (receivedMessageMap.contains("PredecessorNotif")) {
+        } else if (receivedMessageMap.contains("UpdatePredRequest")) {
             QVariantMap predecessor;
             predecessor["Origin"] = receivedMessageMap["Origin"];
             predecessor["HashId"] = receivedMessageMap["HashId"];
             predecessor["ServerId"] = receivedMessageMap["ServerId"];
+            predecessors.clear();
             predecessors.append(predecessor);
 
             QString predOriginDisplay = QString("Origin:%1").arg(predecessor["Origin"].toString());
@@ -212,6 +227,26 @@ void DHTServer::receiveMessage() {
                 successorDisplay->append(predServerIdDisplay);
             }
 
+            QVariantMap updateSuccMessage;
+            updateSuccMessage["Origin"] = localOrigin;
+            updateSuccMessage["HashId"] = hashId;
+            updateSuccMessage["ServerId"] = serverId;
+
+            QStringList list = receivedMessageMap["Origin"].toString().split(":");
+            sendMessage(updateSuccMessage, QHostAddress(list[0]), list[1].toInt());
+
+        } else if (receivedMessageMap.contains("UpdateSuccRequest")) {
+            QVariantMap newSucc;
+            newSucc["Origin"] = receivedMessageMap["Origin"];
+            newSucc["HashId"] = receivedMessageMap["HashId"];
+            newSucc["ServerId"] = receivedMessageMap["ServerId"];
+            successors.clear();
+            successors.append(newSucc);
+
+            successorDisplay->clear();
+            successorDisplay->append(QString("Origin:%1").arg(newSucc["Origin"].toString()));
+            successorDisplay->append(QString("HashId:%1").arg(newSucc["HashId"].toString()));
+            successorDisplay->append(QString("ServerId:%1").arg(newSucc["ServerId"].toString()));
         }
     }
 
@@ -238,6 +273,10 @@ void DHTServer::nodeJoinBtnClickedHandler() {
 }
 
 void DHTServer::keyValInsertionHandler() {
+    qDebug() << "predecessors: " << predecessors << endl;
+    qDebug() << "successors: " << successors << endl;
+
+
     QString key = keyInsertInput->text().simplified();
     QString val = valInsertInput->text().simplified();
 
