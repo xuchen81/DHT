@@ -23,6 +23,8 @@
 #include <QObject>
 #include <QLabel>
 #include <QGroupBox>
+#include <QCloseEvent>
+#include <QMessageBox>
 
 namespace Ui {
 
@@ -83,6 +85,9 @@ private:
 
     QList<QVariantMap> predecessors;
     QList<QVariantMap> successors;
+
+protected:
+    void closeEvent(QCloseEvent *event);
 
 };
 
