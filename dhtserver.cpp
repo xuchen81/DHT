@@ -290,9 +290,14 @@ void DHTServer::keyValInsertionHandler() {
     }
 
     QString info =  QString("Insert key: val => %1: %2").arg(key).arg(val);
+    QString keyHash = Util::getHashId(key);
+
+    bool ok;
+    quint64 keyId = keyHash.toUInt(&ok,16);
 
 
     qDebug() << info;
+    qDebug() << "key hash: " << keyHash << " key id: " << keyId;
 
 }
 
