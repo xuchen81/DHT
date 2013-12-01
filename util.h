@@ -23,7 +23,7 @@ class Util
 {
 public:
     Util();
-    static QString construct32bitsHashId(QString md5HashResult);
+    static QString getHashId(QString key);
 };
 
 #endif // UTIL_H

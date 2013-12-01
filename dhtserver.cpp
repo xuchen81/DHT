@@ -100,12 +100,7 @@ void DHTServer::bindNetSocket(NetSocket *ns) {
     QString ip = info.addresses().first().toString();
 
     localOrigin = QString("%1:%2").arg(ip).arg(netSocket->bindedPort);
-
-    QByteArray byteArray;
-    byteArray.append(localOrigin.toUtf8());
-    QByteArray h = QCA::Hash("md5").hash(byteArray).toByteArray();
-    QString md5re = h.toHex();
-    hashId = Util::construct32bitsHashId(md5re);
+    hashId = Util::getHashId(localOrigin);
 
     bool ok;
     serverId = hashId.toUInt(&ok,16);
@@ -287,10 +282,6 @@ void DHTServer::nodeJoinBtnClickedHandler() {
 }
 
 void DHTServer::keyValInsertionHandler() {
-    qDebug() << "predecessors: " << predecessors << endl;
-    qDebug() << "successors: " << successors << endl;
-
-
     QString key = keyInsertInput->text().simplified();
     QString val = valInsertInput->text().simplified();
 
@@ -299,7 +290,10 @@ void DHTServer::keyValInsertionHandler() {
     }
 
     QString info =  QString("Insert key: val => %1: %2").arg(key).arg(val);
+
+
     qDebug() << info;
+
 }
 
 void DHTServer::lookedupHandler(const QHostInfo &host) {
