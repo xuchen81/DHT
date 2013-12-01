@@ -59,6 +59,8 @@ public slots:
     void lookedupHandler(const QHostInfo &host);
     void receiveMessage();
     void sendMessage(QVariantMap m, QHostAddress ip, quint16 p);
+    void updateSuccessor(QVariantMap succ);
+    void updatePredecessor(QVariantMap pred);
 
     
 private:
