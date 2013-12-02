@@ -110,6 +110,20 @@ void DHTServer::bindNetSocket(NetSocket *ns) {
     setWindowTitle(localOrigin);
 }
 
+void DHTServer::normalLeave() {
+    if (!successors.isEmpty()) {
+        QStringList slist = successors[0]["Origin"].toString().split(":");
+
+        // sendMessage(updateSuccMessage, QHostAddress(plist[0]), plist[1].toInt());
+    }
+
+    if (!predecessors.isEmpty()) {
+        QStringList plist = predecessors[0]["Origin"].toString().split(":");
+
+        // sendMessage(updateSuccMessage, QHostAddress(plist[0]), plist[1].toInt());
+    }
+}
+
 void DHTServer::closeEvent(QCloseEvent *event) {
     QMessageBox msgBox;
     msgBox.setText("Are you sure you want to close this DHT server?");
@@ -119,6 +133,7 @@ void DHTServer::closeEvent(QCloseEvent *event) {
     switch (result) {
       case QMessageBox::Close:
           qDebug() << "This DHT Server is closed...";
+
           event->accept();
           break;
       case QMessageBox::Cancel:

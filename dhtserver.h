@@ -66,6 +66,7 @@ public slots:
 
     
 private:
+    void normalLeave();
     Ui::DHTServer *ui;
     HostNameLookup *hostHunter;
 
