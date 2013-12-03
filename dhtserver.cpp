@@ -389,10 +389,6 @@ void DHTServer::lookedupHandler(const QHostInfo &host) {
     */
 }
 
-
-
-
-
 DHTServer::~DHTServer()
 {
     delete ui;
