@@ -296,6 +296,8 @@ void DHTServer::receiveMessage() {
             successorDisplay->clear();
             predecessors.clear();
             predecessorDisplay->clear();
+        } else if (receivedMessageMap.contains("KVInsertRequest")) {
+
         }
     }
 }
