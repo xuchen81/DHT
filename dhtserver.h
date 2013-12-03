@@ -70,7 +70,7 @@ private:
     Ui::DHTServer *ui;
     HostNameLookup *hostHunter;
 
-    /* UI elements */
+    /* UI elements. */
     QLabel *keyValEnterLabel;
     QLineEdit *keyInsertInput;
     QLineEdit *valInsertInput;
@@ -83,9 +83,13 @@ private:
     QTextEdit *successorDisplay;
     QTextEdit *predecessorDisplay;
 
-
+    /* Neighbours. */
     QList<QVariantMap> predecessors;
     QList<QVariantMap> successors;
+
+    /* Key storage. */
+    QHash<quint64, QVariantMap> kvs;
+
 
 protected:
     void closeEvent(QCloseEvent *event);

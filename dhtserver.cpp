@@ -117,12 +117,12 @@ void DHTServer::normalLeave() {
         if (!predecessors.isEmpty()) {
             QStringList plist = predecessors[0]["Origin"].toString().split(":");
 
-            if (successors[0]["ServerId"].toInt() == predecessors[0]["ServerId"].toInt()) {
+            if (successors[0]["ServerId"].toUInt() == predecessors[0]["ServerId"].toUInt()) {
                 // Only two DHT servers are in the chrod, and 1 wants to leave.
                 QVariantMap leaveMess;
                 leaveMess["NodeExit"] = true;
                 leaveMess["UpdateNeighbsToEmpty"] = true;
-                sendMessage(leaveMess, QHostAddress(slist[0]), slist[1].toInt());
+                sendMessage(leaveMess, QHostAddress(slist[0]), slist[1].toUInt());
             } else {
                 // At least three DHT servers are in the chrod, and 1 wants to leave.
                 QVariantMap leaveMessToSucc;
@@ -130,14 +130,14 @@ void DHTServer::normalLeave() {
                 leaveMessToSucc["Origin"] = predecessors[0]["Origin"];
                 leaveMessToSucc["HashId"] = predecessors[0]["HashId"];
                 leaveMessToSucc["ServerId"] = predecessors[0]["ServerId"];
-                sendMessage(leaveMessToSucc, QHostAddress(slist[0]), slist[1].toInt());
+                sendMessage(leaveMessToSucc, QHostAddress(slist[0]), slist[1].toUInt());
 
                 QVariantMap leaveMessToPred;
                 leaveMessToPred["UpdateSuccRequest"] = true;
                 leaveMessToPred["Origin"] = successors[0]["Origin"];
                 leaveMessToPred["HashId"] = successors[0]["HashId"];
                 leaveMessToPred["ServerId"] = successors[0]["ServerId"];
-                sendMessage(leaveMessToPred, QHostAddress(plist[0]), plist[1].toInt());
+                sendMessage(leaveMessToPred, QHostAddress(plist[0]), plist[1].toUInt());
             }
         }
     }
@@ -238,12 +238,12 @@ void DHTServer::receiveMessage() {
                     joinAcceptedMessage["Succ"] = succ;
                 }
                 QStringList jlist = receivedMessageMap["Origin"].toString().split(":");
-                sendMessage(joinAcceptedMessage, QHostAddress(jlist[0]), jlist[1].toInt());
+                sendMessage(joinAcceptedMessage, QHostAddress(jlist[0]), jlist[1].toUInt());
             } else {
                 qDebug() << "Forwarding join request ! " << endl;
                 QString successorOrigin = successors[0]["Origin"].toString();
                 QStringList list = successorOrigin.split(":");
-                sendMessage(receivedMessageMap, QHostAddress(list[0]), list[1].toInt());
+                sendMessage(receivedMessageMap, QHostAddress(list[0]), list[1].toUInt());
             }
         } else if (receivedMessageMap.contains("JoinRequestAccepted")) {
             QVariantMap pred = receivedMessageMap["Pred"].toMap();
@@ -266,7 +266,7 @@ void DHTServer::receiveMessage() {
             updateSuccMessage["ServerId"] = serverId;
 
             QStringList plist = predecessors[0]["Origin"].toString().split(":");
-            sendMessage(updateSuccMessage, QHostAddress(plist[0]), plist[1].toInt());
+            sendMessage(updateSuccMessage, QHostAddress(plist[0]), plist[1].toUInt());
 
             QVariantMap updatePredMessage;
             updatePredMessage["UpdatePredRequest"] = true;
@@ -275,7 +275,7 @@ void DHTServer::receiveMessage() {
             updatePredMessage["ServerId"] = serverId;
 
             QStringList slist = successors[0]["Origin"].toString().split(":");
-            sendMessage(updatePredMessage, QHostAddress(slist[0]), slist[1].toInt());
+            sendMessage(updatePredMessage, QHostAddress(slist[0]), slist[1].toUInt());
 
         } else if (receivedMessageMap.contains("UpdateSuccRequest")) {
             QVariantMap succ;
@@ -312,7 +312,7 @@ void DHTServer::nodeJoinBtnClickedHandler() {
     }
 
     QString host = list[0];
-    quint16 port = list[1].toInt();
+    quint16 port = list[1].toUInt();
     hostHunter = new HostNameLookup(port);
 
     QHostInfo::lookupHost(host, this, SLOT(lookedupHandler(QHostInfo)));
@@ -333,10 +333,26 @@ void DHTServer::keyValInsertionHandler() {
     bool ok;
     quint64 keyId = keyHash.toUInt(&ok,16);
 
-
     qDebug() << info;
     qDebug() << "key hash: " << keyHash << " key id: " << keyId;
 
+    if (predecessors.isEmpty() || (keyId < serverId && keyId > predecessors[0]["ServerId"].toUInt())) {
+        QVariantMap kvPair;
+        kvPair["Key"] = key;
+        kvPair["KeyHashId"] = keyHash;
+        kvPair["KeyId"] = keyId;
+        kvPair["Val"] = val;
+        kvs.insert(keyId, kvPair);
+        qDebug() << kvs;
+    } else {
+        /* Forwarding the key insertion request. */
+        QVariantMap kvInsertRequest;
+        kvInsertRequest["KVInsertRequest"] = true;
+        kvInsertRequest["Key"] = key;
+        kvInsertRequest["KeyHashId"] = keyHash;
+        kvInsertRequest["KeyId"] = keyId;
+        kvInsertRequest["Key"] = val;
+    }
 }
 
 void DHTServer::lookedupHandler(const QHostInfo &host) {
