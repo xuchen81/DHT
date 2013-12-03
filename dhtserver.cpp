@@ -114,13 +114,32 @@ void DHTServer::normalLeave() {
     if (!successors.isEmpty()) {
         QStringList slist = successors[0]["Origin"].toString().split(":");
 
-        // sendMessage(updateSuccMessage, QHostAddress(plist[0]), plist[1].toInt());
-    }
+        if (!predecessors.isEmpty()) {
+            QStringList plist = predecessors[0]["Origin"].toString().split(":");
 
-    if (!predecessors.isEmpty()) {
-        QStringList plist = predecessors[0]["Origin"].toString().split(":");
+            if (successors[0]["ServerId"].toInt() == predecessors[0]["ServerId"].toInt()) {
+                // Only two DHT servers are in the chrod, and 1 wants to leave.
+                QVariantMap leaveMess;
+                leaveMess["NodeExit"] = true;
+                leaveMess["UpdateNeighbsToEmpty"] = true;
+                sendMessage(leaveMess, QHostAddress(slist[0]), slist[1].toInt());
+            } else {
+                // At least three DHT servers are in the chrod, and 1 wants to leave.
+                QVariantMap leaveMessToSucc;
+                leaveMessToSucc["UpdatePredRequest"] = true;
+                leaveMessToSucc["Origin"] = predecessors[0]["Origin"];
+                leaveMessToSucc["HashId"] = predecessors[0]["HashId"];
+                leaveMessToSucc["ServerId"] = predecessors[0]["ServerId"];
+                sendMessage(leaveMessToSucc, QHostAddress(slist[0]), slist[1].toInt());
 
-        // sendMessage(updateSuccMessage, QHostAddress(plist[0]), plist[1].toInt());
+                QVariantMap leaveMessToPred;
+                leaveMessToPred["UpdateSuccRequest"] = true;
+                leaveMessToPred["Origin"] = successors[0]["Origin"];
+                leaveMessToPred["HashId"] = successors[0]["HashId"];
+                leaveMessToPred["ServerId"] = successors[0]["ServerId"];
+                sendMessage(leaveMessToPred, QHostAddress(plist[0]), plist[1].toInt());
+            }
+        }
     }
 }
 
@@ -133,7 +152,7 @@ void DHTServer::closeEvent(QCloseEvent *event) {
     switch (result) {
       case QMessageBox::Close:
           qDebug() << "This DHT Server is closed...";
-
+          normalLeave();
           event->accept();
           break;
       case QMessageBox::Cancel:
@@ -272,10 +291,14 @@ void DHTServer::receiveMessage() {
             pred["ServerId"] = receivedMessageMap["ServerId"];
 
             updatePredecessor(pred);
+        } else if (receivedMessageMap.contains("NodeExit") && receivedMessageMap.contains("UpdateNeighbsToEmpty")) {
+            successors.clear();
+            successorDisplay->clear();
+            predecessors.clear();
+            predecessorDisplay->clear();
         }
     }
 }
-
 
 void DHTServer::nodeJoinBtnClickedHandler() {
     QHostInfo info = QHostInfo::fromName(QHostInfo::localHostName());
