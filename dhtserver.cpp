@@ -207,8 +207,8 @@ void DHTServer::receiveMessage() {
 
             if (successors.isEmpty() ||
                 (fromId > serverId && fromId < successors[0]["ServerId"].toUInt()) ||
-                (fromId > serverId && fromId > successors[0]["ServerId"].toUInt() && serverId > successors[0]["ServerId"].toUInt()) ||
-                (fromId < serverId && fromId < successors[0]["ServerId"].toUInt() && serverId > successors[0]["ServerId"].toUInt())) {
+                (fromId > serverId && fromId > successors[0]["ServerId"].toUInt() && serverId > successors[0]["ServerId"].toUInt()) || // max
+                (fromId < serverId && fromId < successors[0]["ServerId"].toUInt() && serverId > successors[0]["ServerId"].toUInt())) { // min
 
                 if (successors.isEmpty()) {
                     qDebug() << "============================================== = = = = case 1";
@@ -297,7 +297,20 @@ void DHTServer::receiveMessage() {
             predecessors.clear();
             predecessorDisplay->clear();
         } else if (receivedMessageMap.contains("KVInsertRequest")) {
+            quint64 keyId = receivedMessageMap["KeyId"].toUInt();
+            if ((keyId < serverId && keyId > predecessors[0]["ServerId"].toUInt()) ||
+                (keyId < serverId && keyId < predecessors[0]["ServerId"].toUInt() && serverId < predecessors[0]["ServerId"].toUInt()) ||  // min
+                (keyId > serverId && keyId > predecessors[0]["ServerId"].toUInt() && serverId < predecessors[0]["ServerId"].toUInt())) {  // max)
 
+                QVariantMap kvPair;
+                kvPair["Key"] = receivedMessageMap["Key"];
+                kvPair["KeyHashId"] = receivedMessageMap["KeyHashId"];
+                kvPair["KeyId"] = receivedMessageMap["KeyId"];
+                kvPair["Val"] = receivedMessageMap["Val"];
+
+                kvs.insert(keyId, kvPair);
+
+            }
         }
     }
 }
@@ -338,7 +351,10 @@ void DHTServer::keyValInsertionHandler() {
     qDebug() << info;
     qDebug() << "key hash: " << keyHash << " key id: " << keyId;
 
-    if (predecessors.isEmpty() || (keyId < serverId && keyId > predecessors[0]["ServerId"].toUInt())) {
+    if (predecessors.isEmpty() || 
+        (keyId < serverId && keyId > predecessors[0]["ServerId"].toUInt()) ||
+        (keyId < serverId && keyId < predecessors[0]["ServerId"].toUInt() && serverId < predecessors[0]["ServerId"].toUInt()) ||  // min
+        (keyId > serverId && keyId > predecessors[0]["ServerId"].toUInt() && serverId < predecessors[0]["ServerId"].toUInt())) {  // max
         QVariantMap kvPair;
         kvPair["Key"] = key;
         kvPair["KeyHashId"] = keyHash;
@@ -354,6 +370,9 @@ void DHTServer::keyValInsertionHandler() {
         kvInsertRequest["KeyHashId"] = keyHash;
         kvInsertRequest["KeyId"] = keyId;
         kvInsertRequest["Key"] = val;
+
+        QStringList plist = predecessors[0]["Origin"].toString().split(":");
+        sendMessage(kvInsertRequest, QHostAddress(plist[0]), plist[1].toUInt());
     }
 }
 
