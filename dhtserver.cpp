@@ -169,7 +169,7 @@ void DHTServer::updateSuccessor(QVariantMap succ) {
     successors.append(succ);
     successorDisplay->clear();
     successorDisplay->append(QString("Origin: %1").arg(succ["Origin"].toString()));
-    successorDisplay->append(QString("HashId: %1").arg(succ["Origin"].toString()));
+    successorDisplay->append(QString("HashId: %1").arg(succ["HashId"].toString()));
     successorDisplay->append(QString("ServerId: %1").arg(succ["ServerId"].toString()));
 }
 
@@ -178,7 +178,7 @@ void DHTServer::updatePredecessor(QVariantMap pred) {
     predecessors.append(pred);
     predecessorDisplay->clear();
     predecessorDisplay->append(QString("Origin: %1").arg(pred["Origin"].toString()));
-    predecessorDisplay->append(QString("HashId: %1").arg(pred["Origin"].toString()));
+    predecessorDisplay->append(QString("HashId: %1").arg(pred["HashId"].toString()));
     predecessorDisplay->append(QString("ServerId: %1").arg(pred["ServerId"].toString()));
 }
 
@@ -369,7 +369,7 @@ void DHTServer::keyValInsertionHandler() {
         kvInsertRequest["Key"] = key;
         kvInsertRequest["KeyHashId"] = keyHash;
         kvInsertRequest["KeyId"] = keyId;
-        kvInsertRequest["Key"] = val;
+        kvInsertRequest["Val"] = val;
 
         QStringList plist = predecessors[0]["Origin"].toString().split(":");
         sendMessage(kvInsertRequest, QHostAddress(plist[0]), plist[1].toUInt());
