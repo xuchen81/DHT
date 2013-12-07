@@ -108,6 +108,14 @@ void DHTServer::bindNetSocket(NetSocket *ns) {
 
     connect(netSocket, SIGNAL(readyRead()), this, SLOT(receiveMessage()));
     setWindowTitle(localOrigin);
+    initFingerTable();
+    qDebug()<<fingerTable<<endl;
+}
+
+void DHTServer::initFingerTable() {
+    for (int i=0;i<32;i++) {
+        fingerTable<< localOrigin;
+    }
 }
 
 void DHTServer::normalLeave() {

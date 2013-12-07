@@ -53,6 +53,8 @@ public:
     QString localOrigin;
     QString hashId;
     quint64 serverId;
+    void initFingerTable();
+    QList<QString> fingerTable;
 
 
 public slots:
