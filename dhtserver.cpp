@@ -17,6 +17,30 @@ DHTServer::DHTServer(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::DHTServer)
 {
+    QMenuBar *toolBar = new QMenuBar(this);
+    QMenu *menuInfo = new QMenu("&Info");
+
+    QAction *DHTOpen = new QAction("&DHT Info", this);
+    menuInfo->addAction(DHTOpen);
+    connect(DHTOpen, SIGNAL(triggered()), this, SLOT(DHTOpenHandler()));
+
+    QAction *succOpen = new QAction("&Successor", this);
+    menuInfo->addAction(succOpen);
+    connect(succOpen, SIGNAL(triggered()), this, SLOT(succOpenHandler()));
+
+    QAction *predOpen = new QAction("&Predecessor", this);
+    menuInfo->addAction(predOpen);
+    connect(predOpen, SIGNAL(triggered()), this, SLOT(predOpenHandler()));
+
+    QAction *keysOpen = new QAction("&Keys Info", this);
+    menuInfo->addAction(keysOpen);
+    connect(keysOpen, SIGNAL(triggered()), this, SLOT(keysOpenHandler()));
+
+    QAction *ftOpen = new QAction("&Finger Table", this);
+    menuInfo->addAction(ftOpen);
+    connect(ftOpen, SIGNAL(triggered()), this, SLOT(ftOpenHandler()));
+
+    toolBar->addMenu(menuInfo);
 
     QGroupBox *keyValEnterGroup = new QGroupBox(tr("Insert a key value pair"));
     QLabel *keyLabel = new QLabel("Key:", this);
@@ -64,33 +88,51 @@ DHTServer::DHTServer(QWidget *parent) :
     keySearchLayout->addWidget(keySearchBtn, 2, 0, 1, 2);
     keySearchGroup->setLayout(keySearchLayout);
 
-    QGroupBox *successorGroup = new QGroupBox(tr("Successors"));
-    successorDisplay = new QTextEdit(this);
-    successorDisplay->setReadOnly(true);
-    successorDisplay->setFixedHeight(80);
-    successorDisplay->setFixedWidth(200);
+    QGroupBox *infoDisplayGroup = new QGroupBox(tr("Info Display"));
+    infoDisplay = new QTextEdit(this);
+    infoDisplay->setReadOnly(true);
     QGridLayout *successorDisplayLayout = new QGridLayout;
-    successorDisplayLayout->addWidget(successorDisplay, 0, 0);
-    successorGroup->setLayout(successorDisplayLayout);
-
-    QGroupBox *predecessorGroup = new QGroupBox(tr("Predecessors"));
-    predecessorDisplay = new QTextEdit(this);
-    predecessorDisplay->setReadOnly(true);
-    predecessorDisplay->setFixedHeight(80);
-    predecessorDisplay->setFixedWidth(200);
-    QGridLayout *predecessorDisplayLayout = new QGridLayout;
-    predecessorDisplayLayout->addWidget(predecessorDisplay, 0, 0);
-    predecessorGroup->setLayout(predecessorDisplayLayout);
-
+    successorDisplayLayout->addWidget(infoDisplay, 0, 0);
+    infoDisplayGroup->setLayout(successorDisplayLayout);
 
     QGridLayout *layout = new QGridLayout(this);
+    layout->setMenuBar(toolBar);
     layout->addWidget(keyValEnterGroup, 0, 0);
     layout->addWidget(nodeEnterGroup, 1, 0);
     layout->addWidget(keySearchGroup, 2, 0);
-    layout->addWidget(successorGroup, 0, 1);
-    layout->addWidget(predecessorGroup, 1, 1);
+    layout->addWidget(infoDisplayGroup, 0, 1, 3, 1);
 
     setLayout(layout);
+}
+
+void DHTServer::DHTOpenHandler() {
+    qDebug() << "Shit haha";
+}
+
+void DHTServer::keysOpenHandler() {
+
+}
+
+void DHTServer::ftOpenHandler() {
+    
+}
+
+void DHTServer::succOpenHandler() {
+    infoDisplay->clear();
+    if (!successors.isEmpty()) {
+        infoDisplay->append(QString("Origin: %1").arg(successors[0]["Origin"].toString()));
+        infoDisplay->append(QString("HashId: %1").arg(successors[0]["HashId"].toString()));
+        infoDisplay->append(QString("ServerId: %1").arg(successors[0]["ServerId"].toString()));
+    }
+}
+
+void DHTServer::predOpenHandler() {
+    infoDisplay->clear();
+    if (!predecessors.isEmpty()) {
+        infoDisplay->append(QString("Origin: %1").arg(predecessors[0]["Origin"].toString()));
+        infoDisplay->append(QString("HashId: %1").arg(predecessors[0]["HashId"].toString()));
+        infoDisplay->append(QString("ServerId: %1").arg(predecessors[0]["ServerId"].toString()));
+    }
 }
 
 void DHTServer::bindNetSocket(NetSocket *ns) {
@@ -176,19 +218,11 @@ void DHTServer::closeEvent(QCloseEvent *event) {
 void DHTServer::updateSuccessor(QVariantMap succ) {
     successors.clear();
     successors.append(succ);
-    successorDisplay->clear();
-    successorDisplay->append(QString("Origin: %1").arg(succ["Origin"].toString()));
-    successorDisplay->append(QString("HashId: %1").arg(succ["HashId"].toString()));
-    successorDisplay->append(QString("ServerId: %1").arg(succ["ServerId"].toString()));
 }
 
 void DHTServer::updatePredecessor(QVariantMap pred) {
     predecessors.clear();
     predecessors.append(pred);
-    predecessorDisplay->clear();
-    predecessorDisplay->append(QString("Origin: %1").arg(pred["Origin"].toString()));
-    predecessorDisplay->append(QString("HashId: %1").arg(pred["HashId"].toString()));
-    predecessorDisplay->append(QString("ServerId: %1").arg(pred["ServerId"].toString()));
 }
 
 void DHTServer::sendMessage(QVariantMap m, QHostAddress ip, quint16 prt) {
@@ -302,9 +336,7 @@ void DHTServer::receiveMessage() {
             updatePredecessor(pred);
         } else if (receivedMessageMap.contains("NodeExit") && receivedMessageMap.contains("UpdateNeighbsToEmpty")) {
             successors.clear();
-            successorDisplay->clear();
             predecessors.clear();
-            predecessorDisplay->clear();
         } else if (receivedMessageMap.contains("KVInsertRequest")) {
             quint64 keyId = receivedMessageMap["KeyId"].toUInt();
             if ((keyId < serverId && keyId > predecessors[0]["ServerId"].toUInt()) ||

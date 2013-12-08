@@ -25,6 +25,10 @@
 #include <QGroupBox>
 #include <QCloseEvent>
 #include <QMessageBox>
+#include <QMenuBar>
+#include <QMenu>
+#include <QAction>
+
 
 namespace Ui {
 
@@ -65,6 +69,11 @@ public slots:
     void sendMessage(QVariantMap m, QHostAddress ip, quint16 p);
     void updateSuccessor(QVariantMap succ);
     void updatePredecessor(QVariantMap pred);
+    void DHTOpenHandler();
+    void succOpenHandler();
+    void predOpenHandler();
+    void keysOpenHandler();
+    void ftOpenHandler();
 
     
 private:
@@ -82,8 +91,7 @@ private:
     QLineEdit *keySearchInput;
     QLineEdit *valDisplay;
     QPushButton *keySearchBtn;
-    QTextEdit *successorDisplay;
-    QTextEdit *predecessorDisplay;
+    QTextEdit *infoDisplay;
 
     /* Neighbours. */
     QList<QVariantMap> predecessors;
