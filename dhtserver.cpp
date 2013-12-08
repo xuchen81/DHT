@@ -108,6 +108,7 @@ void DHTServer::bindNetSocket(NetSocket *ns) {
 
     connect(netSocket, SIGNAL(readyRead()), this, SLOT(receiveMessage()));
     setWindowTitle(localOrigin);
+    setWindowFlags(Qt::Dialog | Qt::Desktop);
     initFingerTable();
     qDebug()<<fingerTable<<endl;
 }
