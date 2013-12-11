@@ -106,15 +106,37 @@ DHTServer::DHTServer(QWidget *parent) :
 }
 
 void DHTServer::DHTOpenHandler() {
-    qDebug() << "Shit haha";
+    infoDisplay->clear();
+    infoDisplay->append("*************************************");
+    infoDisplay->append(QString("*    About this DHT:"));
+    infoDisplay->append(QString("*    Origin: %1").arg(localOrigin));
+    infoDisplay->append(QString("*    HashId: %1").arg(hashId));
+    infoDisplay->append(QString("*    ServerId: %1").arg(serverId));
+    infoDisplay->append("*************************************");
 }
 
 void DHTServer::keysOpenHandler() {
+    infoDisplay->clear();
+    for (QHash<quint64,QVariantMap>::iterator i = kvs.begin(); i != kvs.end(); i++) {
+        infoDisplay->append(QString("KeyHashId: %1").arg(i.value()["KeyHashId"].toString()));
+        infoDisplay->append(QString("KeyId: %1").arg(i.value()["KeyId"].toUInt()));
+        infoDisplay->append(QString("Key => Val: %1 => %2").arg(i.value()["Key"].toString()).arg(i.value()["Val"].toString()));
+        infoDisplay->append("*************************************");
+    }
 
 }
 
 void DHTServer::ftOpenHandler() {
-    
+    infoDisplay->clear();
+    for (QHash<quint64,QVariantMap>::iterator i = fingerTable.begin(); i != fingerTable.end(); i++) {
+        infoDisplay->append(QString("Key: %1").arg(i.key()));
+        infoDisplay->append(QString("Origin: %1").arg(i.value()["Origin"].toString()));
+        infoDisplay->append(QString("HashId: %1").arg(i.value()["HashId"].toString()));
+        infoDisplay->append(QString("ServerId: %1").arg(i.value()["ServerId"].toString()));
+        infoDisplay->append(QString("Distance: %1").arg(i.value()["Distance"].toUInt()));
+        infoDisplay->append(QString("HopPoint: %1").arg(i.value()["HopPoint"].toUInt()));
+        infoDisplay->append(QString("*****************"));
+    }
 }
 
 void DHTServer::succOpenHandler() {
@@ -156,8 +178,24 @@ void DHTServer::bindNetSocket(NetSocket *ns) {
 }
 
 void DHTServer::initFingerTable() {
+    //hopPoint is the hash value to hit
+    //Distance is the clockwise amount from the hop point to its master node
+
+    QVariantMap node;
+    node["Origin"] = localOrigin;
+    node["ServerId"] = serverId;
+    node["HashId"] = hashId;
+    quint64 exp2 = 1;
+    quint64 distance;
+    quint64 hopPoint;
+
     for (int i=0;i<32;i++) {
-        fingerTable<< localOrigin;
+        hopPoint = ((exp2 << i) + serverId) > CHORD_RANGE ? (((exp2 << i) + serverId) - CHORD_RANGE) : ((exp2 << i) + serverId);
+
+        node["HopPoint"] = hopPoint;
+        distance = (serverId - hopPoint) > 0 ? (serverId - hopPoint) : (CHORD_RANGE - hopPoint + serverId);
+        node["Distance"] = distance;
+        fingerTable.insert(i, node);
     }
 }
 
@@ -190,6 +228,17 @@ void DHTServer::normalLeave() {
                 leaveMessToPred["ServerId"] = successors[0]["ServerId"];
                 sendMessage(leaveMessToPred, QHostAddress(plist[0]), plist[1].toUInt());
             }
+
+            QVariantMap leaveMessFinger;
+            leaveMessFinger["updateFinMessage"] = true;
+            leaveMessFinger["Direction"] = "exit";
+            leaveMessFinger["Origin"] = localOrigin;
+            leaveMessFinger["HashId"] = hashId;
+            leaveMessFinger["ServerId"] = serverId;
+            leaveMessFinger["Succ"] = successors[0];
+
+            QStringList flist = successors[0]["Origin"].toString().split(":");
+            sendMessage(leaveMessFinger,QHostAddress(flist[0]),flist[1].toUInt());
         }
     }
 }
@@ -215,8 +264,58 @@ void DHTServer::closeEvent(QCloseEvent *event) {
     }
 }
 
+void DHTServer::updateFingerTable(QVariantMap node) {
+    if (node["Direction"] == "join") {
+        quint64 distance;
+
+        QVariantMap hopSucc;
+
+        for (int i=0;i<32;i++) {
+            hopSucc = fingerTable[i];
+            distance = (node["ServerId"].toUInt() - hopSucc["HopPoint"].toUInt()) > 0 ?
+                       (node["ServerId"].toUInt() - hopSucc["HopPoint"].toUInt()):
+                       (CHORD_RANGE + node["ServerId"].toUInt() - hopSucc["HopPoint"].toUInt());
+
+            if (i==31) {
+                qDebug() << distance << " : " << hopSucc["Distance"].toUInt()<<endl;
+                qDebug() << hopSucc << endl;
+            }
+
+            if (hopSucc["Distance"].toUInt()>distance){
+                if (i==31) {
+                    qDebug()<<hopSucc["Distance"].toUInt()<<"****"<<distance<<endl;
+                }
+
+                hopSucc["Origin"] = node["Origin"];
+                hopSucc["ServerId"] = node["ServerId"];
+                hopSucc["HashId"] = node["HashId"];
+                hopSucc["Distance"] = distance;
+                fingerTable[i] = hopSucc;
+            }
+        }
+    } else if (node["Direction"] == "exit") {
+        QVariantMap hopSucc;
+        QVariantMap leaveSucc = node["Succ"].toMap();
+        quint64 distance;
+
+        for (int i=0;i<32;i++) {
+            hopSucc = fingerTable[i];
+            if (hopSucc["Origin"] == node["Origin"]) {
+                distance = (leaveSucc["ServerId"].toUInt() - hopSucc["HopPoint"].toUInt()) > 0  ?
+                           (leaveSucc["ServerId"].toUInt() - hopSucc["HopPoint"].toUInt()) :
+                           (CHORD_RANGE + leaveSucc["ServerId"].toUInt() - hopSucc["HopPoint"].toUInt());
+
+                hopSucc["Origin"] = leaveSucc["Origin"];
+                hopSucc["ServerId"] = leaveSucc["ServerId"];
+                hopSucc["HashId"] = node["HashId"];
+                hopSucc["Distance"] = distance;
+                fingerTable[i] = hopSucc;
+            }
+        }
+    }
+}
+
 void DHTServer::updateSuccessor(QVariantMap succ) {
-    successors.clear();
     successors.append(succ);
 }
 
@@ -320,6 +419,19 @@ void DHTServer::receiveMessage() {
             QStringList slist = successors[0]["Origin"].toString().split(":");
             sendMessage(updatePredMessage, QHostAddress(slist[0]), slist[1].toUInt());
 
+            //send fingertable update info to succ
+            QVariantMap updateFingerTabMessage;
+            updateFingerTabMessage["UpdateFinMessage"] = true;
+            updateFingerTabMessage["Direction"] = "join";
+            updateFingerTabMessage["Origin"] = localOrigin;
+            updateFingerTabMessage["HashId"] = hashId;
+            updateFingerTabMessage["ServerId"] = serverId;
+
+            QStringList flist = successors[0]["Origin"].toString().split(":");
+            sendMessage(updateFingerTabMessage, QHostAddress(flist[0]), flist[1].toUInt());
+
+            qDebug()<<"***********JoinRequestAccepted**********"<<endl;
+
         } else if (receivedMessageMap.contains("UpdateSuccRequest")) {
             QVariantMap succ;
             succ["Origin"] = receivedMessageMap["Origin"];
@@ -334,6 +446,54 @@ void DHTServer::receiveMessage() {
             pred["ServerId"] = receivedMessageMap["ServerId"];
 
             updatePredecessor(pred);
+        } else if (receivedMessageMap.contains("UpdateFinMessage") && (receivedMessageMap["Direction"]== "join") && 
+                   localOrigin != receivedMessageMap["Origin"]) {
+
+            QVariantMap node;
+            node["Origin"] = receivedMessageMap["Origin"];
+            node["HashId"] = receivedMessageMap["HashId"];
+            node["ServerId"] = receivedMessageMap["ServerId"];
+            node["Direction"] = receivedMessageMap["Direction"];
+
+            updateFingerTable(node);
+
+            qDebug()<<"***********UpdateFinMessage**********"<<endl;
+
+            QStringList flist = successors[0]["Origin"].toString().split(":");
+            sendMessage(receivedMessageMap,QHostAddress(flist[0]),flist[1].toUInt());
+
+            // send to new node localOrigin info for updating finger table of new node
+            QVariantMap updateFinNewnodeMessage;
+            updateFinNewnodeMessage["UpdateNewFinMessage"] = true;
+            updateFinNewnodeMessage["Origin"] = localOrigin;
+            updateFinNewnodeMessage["HashId"] = hashId;
+            updateFinNewnodeMessage["ServerId"] = serverId;
+            updateFinNewnodeMessage["Direction"] = "join";
+
+            QStringList newNodelist = node["Origin"].toString().split(":");
+            sendMessage(updateFinNewnodeMessage,QHostAddress(newNodelist[0]),newNodelist[1].toUInt());
+        } else if (receivedMessageMap.contains("UpdateNewFinMessage")) {
+            QVariantMap node;
+            node["Origin"] = receivedMessageMap["Origin"];
+            node["HashId"] = receivedMessageMap["HashId"];
+            node["ServerId"] = receivedMessageMap["ServerId"];
+            node["Direction"] = receivedMessageMap["Direction"];
+            qDebug()<<"***********UpdateNewFinMessage**********"<<endl;
+            updateFingerTable(node);
+        } else if (receivedMessageMap.contains("UpdateFinMessage") && (receivedMessageMap["Direction"]== "exit")) {
+            QVariantMap node;
+            node["Origin"] = receivedMessageMap["Origin"];
+            node["HashId"] = receivedMessageMap["HashId"];
+            node["ServerId"] = receivedMessageMap["ServerId"];
+            node["Direction"] = receivedMessageMap["Direction"];
+            node["Succ"] = receivedMessageMap["Succ"];
+
+            updateFingerTable(node);
+            if (successors[0]["Origin"].toString() != node["Succ"].toMap()["Origin"].toString()) {
+                QStringList flist = successors[0]["Origin"].toString().split(":");
+                sendMessage(receivedMessageMap,QHostAddress(flist[0]),flist[1].toUInt());
+            }
+
         } else if (receivedMessageMap.contains("NodeExit") && receivedMessageMap.contains("UpdateNeighbsToEmpty")) {
             successors.clear();
             predecessors.clear();
@@ -438,18 +598,26 @@ void DHTServer::lookedupHandler(const QHostInfo &host) {
     joinMessage["HashId"] = hashId;
     joinMessage["ServerId"] = serverId;
     sendMessage(joinMessage, QHostAddress(hostHunter->ipAddr), hostHunter->port);
-
-    /*
-    QVariantMap peer;
-
-    peer["ipAddr"] = hostHunter->ipAddr;
-    peer["port"] = hostHunter->port;
-    peerList.append(peer);
-
-    QString peerInfo = QString("%1 %2").arg(hostHunter->ipAddr).arg(hostHunter->port);
-    peersInfoDisplay->append(peerInfo);
-    */
 }
+
+void DHTServer::searchKeyBtnClickedHandler() {
+    QString key = keySearchInput->text();
+
+   /* if (foundKeyLocal(key)){
+        kvs[key]
+    };*/
+}
+
+/*bool DHTServer::foundKeyLocal(quint64 keyId) {
+
+    if () {
+
+    }
+    else {
+        return false;
+    }
+
+}*/
 
 DHTServer::~DHTServer()
 {

@@ -28,7 +28,7 @@
 #include <QMenuBar>
 #include <QMenu>
 #include <QAction>
-
+#define CHORD_RANGE 4294967296
 
 namespace Ui {
 
@@ -58,17 +58,18 @@ public:
     QString hashId;
     quint64 serverId;
     void initFingerTable();
-    QList<QString> fingerTable;
 
 
 public slots:
     void keyValInsertionHandler();
     void nodeJoinBtnClickedHandler();
+    void searchKeyBtnClickedHandler();
     void lookedupHandler(const QHostInfo &host);
     void receiveMessage();
     void sendMessage(QVariantMap m, QHostAddress ip, quint16 p);
     void updateSuccessor(QVariantMap succ);
     void updatePredecessor(QVariantMap pred);
+    void updateFingerTable(QVariantMap node);
     void DHTOpenHandler();
     void succOpenHandler();
     void predOpenHandler();
@@ -99,6 +100,9 @@ private:
 
     /* Key storage. */
     QHash<quint64, QVariantMap> kvs;
+
+    /* Fingertable. */
+    QHash<quint64,QVariantMap> fingerTable;
 
 
 protected:
