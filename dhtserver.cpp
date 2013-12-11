@@ -491,18 +491,22 @@ void DHTServer::receiveMessage() {
             updateFingerTable(node);
             if (successors[0]["Origin"].toString() != node["Succ"].toMap()["Origin"].toString()) {
                 QStringList flist = successors[0]["Origin"].toString().split(":");
-                sendMessage(receivedMessageMap,QHostAddress(flist[0]),flist[1].toUInt());
+                sendMessage(receivedMessageMap,QHostAddress(flist[0]), flist[1].toUInt());
             }
 
         } else if (receivedMessageMap.contains("NodeExit") && receivedMessageMap.contains("UpdateNeighbsToEmpty")) {
             successors.clear();
             predecessors.clear();
         } else if (receivedMessageMap.contains("KVInsertRequest")) {
+
             quint64 keyId = receivedMessageMap["KeyId"].toUInt();
+
+            qDebug() << "I got this Key insert request";
             if ((keyId < serverId && keyId > predecessors[0]["ServerId"].toUInt()) ||
                 (keyId < serverId && keyId < predecessors[0]["ServerId"].toUInt() && serverId < predecessors[0]["ServerId"].toUInt()) ||  // min
                 (keyId > serverId && keyId > predecessors[0]["ServerId"].toUInt() && serverId < predecessors[0]["ServerId"].toUInt())) {  // max)
 
+                qDebug() << "I accepted";
                 QVariantMap kvPair;
                 kvPair["Key"] = receivedMessageMap["Key"];
                 kvPair["KeyHashId"] = receivedMessageMap["KeyHashId"];
@@ -510,7 +514,9 @@ void DHTServer::receiveMessage() {
                 kvPair["Val"] = receivedMessageMap["Val"];
 
                 kvs.insert(keyId, kvPair);
-
+            } else { /* Forwarding the key insertion request. */
+                QStringList plist = predecessors[0]["Origin"].toString().split(":");
+                sendMessage(receivedMessageMap, QHostAddress(plist[0]), plist[1].toUInt());
             }
         }
     }
