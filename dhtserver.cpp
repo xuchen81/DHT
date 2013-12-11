@@ -22,15 +22,11 @@ DHTServer::DHTServer(QWidget *parent) :
 
     QAction *DHTOpen = new QAction("&DHT Info", this);
     menuInfo->addAction(DHTOpen);
-    connect(DHTOpen, SIGNAL(triggered()), this, SLOT(DHTOpenHandler()));
+    connect(DHTOpen, SIGNAL(triggered()), this, SLOT(displayThisDHT()));
 
-    QAction *succOpen = new QAction("&Successor", this);
-    menuInfo->addAction(succOpen);
-    connect(succOpen, SIGNAL(triggered()), this, SLOT(succOpenHandler()));
-
-    QAction *predOpen = new QAction("&Predecessor", this);
-    menuInfo->addAction(predOpen);
-    connect(predOpen, SIGNAL(triggered()), this, SLOT(predOpenHandler()));
+    QAction *neighboursOpen = new QAction("&Successor and Predecessor", this);
+    menuInfo->addAction(neighboursOpen);
+    connect(neighboursOpen, SIGNAL(triggered()), this, SLOT(neighboursOpenHandler()));
 
     QAction *keysOpen = new QAction("&Keys Info", this);
     menuInfo->addAction(keysOpen);
@@ -105,7 +101,7 @@ DHTServer::DHTServer(QWidget *parent) :
     setLayout(layout);
 }
 
-void DHTServer::DHTOpenHandler() {
+void DHTServer::displayThisDHT() {
     infoDisplay->clear();
     infoDisplay->append("*************************************");
     infoDisplay->append(QString("*    About this DHT:"));
@@ -116,7 +112,7 @@ void DHTServer::DHTOpenHandler() {
 }
 
 void DHTServer::keysOpenHandler() {
-    infoDisplay->clear();
+    displayThisDHT();
     for (QHash<quint64,QVariantMap>::iterator i = kvs.begin(); i != kvs.end(); i++) {
         infoDisplay->append(QString("KeyHashId: %1").arg(i.value()["KeyHashId"].toString()));
         infoDisplay->append(QString("KeyId: %1").arg(i.value()["KeyId"].toUInt()));
@@ -127,7 +123,7 @@ void DHTServer::keysOpenHandler() {
 }
 
 void DHTServer::ftOpenHandler() {
-    infoDisplay->clear();
+    displayThisDHT();
     for (QHash<quint64,QVariantMap>::iterator i = fingerTable.begin(); i != fingerTable.end(); i++) {
         infoDisplay->append(QString("Key: %1").arg(i.key()));
         infoDisplay->append(QString("Origin: %1").arg(i.value()["Origin"].toString()));
@@ -139,22 +135,27 @@ void DHTServer::ftOpenHandler() {
     }
 }
 
-void DHTServer::succOpenHandler() {
-    infoDisplay->clear();
+void DHTServer::neighboursOpenHandler() {
+    displayThisDHT();
+    infoDisplay->append(QString("-----------------------------------------------"));
     if (!successors.isEmpty()) {
-        infoDisplay->append(QString("Origin: %1").arg(successors[0]["Origin"].toString()));
-        infoDisplay->append(QString("HashId: %1").arg(successors[0]["HashId"].toString()));
-        infoDisplay->append(QString("ServerId: %1").arg(successors[0]["ServerId"].toString()));
+        infoDisplay->append(QString("|    Successor:"));
+        infoDisplay->append(QString("|    Origin: %1").arg(successors[0]["Origin"].toString()));
+        infoDisplay->append(QString("|    HashId: %1").arg(successors[0]["HashId"].toString()));
+        infoDisplay->append(QString("|    ServerId: %1").arg(successors[0]["ServerId"].toString()));
+    } else {
+        infoDisplay->append("There is no successor at this moment.");
     }
-}
-
-void DHTServer::predOpenHandler() {
-    infoDisplay->clear();
+    infoDisplay->append(QString("-----------------------------------------------"));
     if (!predecessors.isEmpty()) {
-        infoDisplay->append(QString("Origin: %1").arg(predecessors[0]["Origin"].toString()));
-        infoDisplay->append(QString("HashId: %1").arg(predecessors[0]["HashId"].toString()));
-        infoDisplay->append(QString("ServerId: %1").arg(predecessors[0]["ServerId"].toString()));
+        infoDisplay->append(QString("|    Predecessor:"));
+        infoDisplay->append(QString("|    Origin: %1").arg(predecessors[0]["Origin"].toString()));
+        infoDisplay->append(QString("|    HashId: %1").arg(predecessors[0]["HashId"].toString()));
+        infoDisplay->append(QString("|    ServerId: %1").arg(predecessors[0]["ServerId"].toString()));
+    } else {
+        infoDisplay->append("There is no predecessor at this moment.");
     }
+    infoDisplay->append(QString("-----------------------------------------------"));
 }
 
 void DHTServer::bindNetSocket(NetSocket *ns) {
@@ -174,6 +175,7 @@ void DHTServer::bindNetSocket(NetSocket *ns) {
     setWindowTitle(localOrigin);
     setWindowFlags(Qt::Dialog | Qt::Desktop);
     initFingerTable();
+    displayThisDHT();
     qDebug()<<fingerTable<<endl;
 }
 
@@ -316,12 +318,15 @@ void DHTServer::updateFingerTable(QVariantMap node) {
 }
 
 void DHTServer::updateSuccessor(QVariantMap succ) {
+    successors.clear();
     successors.append(succ);
+    neighboursOpenHandler();
 }
 
 void DHTServer::updatePredecessor(QVariantMap pred) {
     predecessors.clear();
     predecessors.append(pred);
+    neighboursOpenHandler();
 }
 
 void DHTServer::sendMessage(QVariantMap m, QHostAddress ip, quint16 prt) {

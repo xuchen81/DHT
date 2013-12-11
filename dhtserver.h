@@ -70,9 +70,8 @@ public slots:
     void updateSuccessor(QVariantMap succ);
     void updatePredecessor(QVariantMap pred);
     void updateFingerTable(QVariantMap node);
-    void DHTOpenHandler();
-    void succOpenHandler();
-    void predOpenHandler();
+    void displayThisDHT();
+    void neighboursOpenHandler();
     void keysOpenHandler();
     void ftOpenHandler();
 
