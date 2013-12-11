@@ -30,6 +30,7 @@
 #include <QAction>
 #define CHORD_RANGE 4294967296
 
+
 namespace Ui {
 
 class DHTServer;
@@ -58,6 +59,7 @@ public:
     QString hashId;
     quint64 serverId;
     void initFingerTable();
+    void spreadKeysToNeighbours();
 
 
 public slots:

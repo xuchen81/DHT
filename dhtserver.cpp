@@ -103,12 +103,12 @@ DHTServer::DHTServer(QWidget *parent) :
 
 void DHTServer::displayThisDHT() {
     infoDisplay->clear();
-    infoDisplay->append("*************************************");
+    infoDisplay->append("***********************************");
     infoDisplay->append(QString("*    About this DHT:"));
     infoDisplay->append(QString("*    Origin: %1").arg(localOrigin));
     infoDisplay->append(QString("*    HashId: %1").arg(hashId));
     infoDisplay->append(QString("*    ServerId: %1").arg(serverId));
-    infoDisplay->append("*************************************");
+    infoDisplay->append("***********************************");
 }
 
 void DHTServer::keysOpenHandler() {
@@ -119,7 +119,6 @@ void DHTServer::keysOpenHandler() {
         infoDisplay->append(QString("Key => Val: %1 => %2").arg(i.value()["Key"].toString()).arg(i.value()["Val"].toString()));
         infoDisplay->append("*************************************");
     }
-
 }
 
 void DHTServer::ftOpenHandler() {
@@ -201,6 +200,26 @@ void DHTServer::initFingerTable() {
     }
 }
 
+void DHTServer::spreadKeysToNeighbours() {
+    if (successors.isEmpty() || predecessors.isEmpty()) return;
+
+    if (successors[0]["ServerId"].toUInt() == predecessors[0]["ServerId"].toUInt()) {
+        for (QHash<quint64,QVariantMap>::iterator i = kvs.begin(); i != kvs.end(); i++) {
+            QVariantMap keyValMigration;
+            keyValMigration["KVInsertRequest"] = true;
+            keyValMigration["Key"] = i.value()["Key"];
+            keyValMigration["KeyHashId"] = i.value()["KeyHashId"];
+            keyValMigration["KeyId"] = i.value()["KeyId"];
+            keyValMigration["Val"] = i.value()["Val"];
+
+            QStringList slist = successors[0]["Origin"].toString().split(":");
+            sendMessage(keyValMigration, QHostAddress(slist[0]), slist[1].toUInt());
+        }
+    } else {
+
+    }
+}
+
 void DHTServer::normalLeave() {
     if (!successors.isEmpty()) {
         QStringList slist = successors[0]["Origin"].toString().split(":");
@@ -230,6 +249,8 @@ void DHTServer::normalLeave() {
                 leaveMessToPred["ServerId"] = successors[0]["ServerId"];
                 sendMessage(leaveMessToPred, QHostAddress(plist[0]), plist[1].toUInt());
             }
+
+            spreadKeysToNeighbours();
 
             QVariantMap leaveMessFinger;
             leaveMessFinger["updateFinMessage"] = true;
@@ -507,7 +528,8 @@ void DHTServer::receiveMessage() {
             quint64 keyId = receivedMessageMap["KeyId"].toUInt();
 
             qDebug() << "I got this Key insert request";
-            if ((keyId < serverId && keyId > predecessors[0]["ServerId"].toUInt()) ||
+            if (successors.isEmpty() ||
+                (keyId < serverId && keyId > predecessors[0]["ServerId"].toUInt()) ||
                 (keyId < serverId && keyId < predecessors[0]["ServerId"].toUInt() && serverId < predecessors[0]["ServerId"].toUInt()) ||  // min
                 (keyId > serverId && keyId > predecessors[0]["ServerId"].toUInt() && serverId < predecessors[0]["ServerId"].toUInt())) {  // max)
 
