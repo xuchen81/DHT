@@ -203,20 +203,16 @@ void DHTServer::initFingerTable() {
 void DHTServer::spreadKeysToNeighbours() {
     if (successors.isEmpty() || predecessors.isEmpty()) return;
 
-    if (successors[0]["ServerId"].toUInt() == predecessors[0]["ServerId"].toUInt()) {
-        for (QHash<quint64,QVariantMap>::iterator i = kvs.begin(); i != kvs.end(); i++) {
-            QVariantMap keyValMigration;
-            keyValMigration["KVInsertRequest"] = true;
-            keyValMigration["Key"] = i.value()["Key"];
-            keyValMigration["KeyHashId"] = i.value()["KeyHashId"];
-            keyValMigration["KeyId"] = i.value()["KeyId"];
-            keyValMigration["Val"] = i.value()["Val"];
+    for (QHash<quint64,QVariantMap>::iterator i = kvs.begin(); i != kvs.end(); i++) {
+        QVariantMap keyValMigration;
+        keyValMigration["KVInsertRequest"] = true;
+        keyValMigration["Key"] = i.value()["Key"];
+        keyValMigration["KeyHashId"] = i.value()["KeyHashId"];
+        keyValMigration["KeyId"] = i.value()["KeyId"];
+        keyValMigration["Val"] = i.value()["Val"];
 
-            QStringList slist = successors[0]["Origin"].toString().split(":");
-            sendMessage(keyValMigration, QHostAddress(slist[0]), slist[1].toUInt());
-        }
-    } else {
-
+        QStringList slist = successors[0]["Origin"].toString().split(":");
+        sendMessage(keyValMigration, QHostAddress(slist[0]), slist[1].toUInt());
     }
 }
 
