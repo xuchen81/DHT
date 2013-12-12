@@ -441,6 +441,14 @@ void DHTServer::receiveMessage() {
             QStringList slist = successors[0]["Origin"].toString().split(":");
             sendMessage(updatePredMessage, QHostAddress(slist[0]), slist[1].toUInt());
 
+            /* Migrate keys. */
+            QVariantMap migrateKeysMess;
+            migrateKeysMess["MigrateKeys"] = true;
+            migrateKeysMess["Origin"] = localOrigin;
+            migrateKeysMess["HashId"] = hashId;
+            migrateKeysMess["ServerId"] = serverId;
+            sendMessage(migrateKeysMess, QHostAddress(slist[0]), slist[1].toUInt());
+
             //send fingertable update info to succ
             QVariantMap updateFingerTabMessage;
             updateFingerTabMessage["UpdateFinMessage"] = true;
@@ -537,9 +545,46 @@ void DHTServer::receiveMessage() {
                 kvPair["Val"] = receivedMessageMap["Val"];
 
                 kvs.insert(keyId, kvPair);
+                keysOpenHandler();
             } else { /* Forwarding the key insertion request. */
                 QStringList plist = predecessors[0]["Origin"].toString().split(":");
                 sendMessage(receivedMessageMap, QHostAddress(plist[0]), plist[1].toUInt());
+            }
+        } else if (receivedMessageMap.contains("MigrateKeys")) {
+            QStringList l = receivedMessageMap["Origin"].toString().split(":");
+            QList<quint64> toRemove;
+
+            for (QHash<quint64,QVariantMap>::iterator i = kvs.begin(); i != kvs.end(); i++) {
+                if (serverId < receivedMessageMap["ServerId"].toUInt()) {
+                    if (i.key() < receivedMessageMap["ServerId"].toUInt() && i.key() > serverId) {
+                        QVariantMap keyValMigration;
+                        keyValMigration["KVInsertRequest"] = true;
+                        keyValMigration["Key"] = i.value()["Key"];
+                        keyValMigration["KeyHashId"] = i.value()["KeyHashId"];
+                        keyValMigration["KeyId"] = i.value()["KeyId"];
+                        keyValMigration["Val"] = i.value()["Val"];
+
+                        sendMessage(keyValMigration, QHostAddress(l[0]), l[1].toUInt());
+                        toRemove.append(i.key());
+                    }
+                } else {
+                    if (i.key() < receivedMessageMap["ServerId"].toUInt()) {
+
+                        QVariantMap keyValMigration;
+                        keyValMigration["KVInsertRequest"] = true;
+                        keyValMigration["Key"] = i.value()["Key"];
+                        keyValMigration["KeyHashId"] = i.value()["KeyHashId"];
+                        keyValMigration["KeyId"] = i.value()["KeyId"];
+                        keyValMigration["Val"] = i.value()["Val"];
+
+                        sendMessage(keyValMigration, QHostAddress(l[0]), l[1].toUInt());
+                        toRemove.append(i.key());
+                    }
+                }
+            }
+
+            for (int i = 0; i < toRemove.length(); i++) {
+                kvs.remove(toRemove[i]);
             }
         }
     }
@@ -591,7 +636,7 @@ void DHTServer::keyValInsertionHandler() {
         kvPair["KeyId"] = keyId;
         kvPair["Val"] = val;
         kvs.insert(keyId, kvPair);
-        qDebug() << kvs;
+        keysOpenHandler();
     } else {
         /* Forwarding the key insertion request. */
         QVariantMap kvInsertRequest;
