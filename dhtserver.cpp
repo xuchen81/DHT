@@ -36,6 +36,10 @@ DHTServer::DHTServer(QWidget *parent) :
     menuInfo->addAction(ftOpen);
     connect(ftOpen, SIGNAL(triggered()), this, SLOT(ftOpenHandler()));
 
+    QAction *cacheOpen = new QAction("&Key Cache", this);
+    menuInfo->addAction(cacheOpen);
+    connect(cacheOpen, SIGNAL(triggered()), this, SLOT(kvCacheOpenHandler()));
+
     toolBar->addMenu(menuInfo);
 
     QGroupBox *keyValEnterGroup = new QGroupBox(tr("Insert a key value pair"));
@@ -76,12 +80,17 @@ DHTServer::DHTServer(QWidget *parent) :
     p.setColor(QPalette::Base, QColor(240, 240, 255));
     valDisplay->setPalette(p);
     keySearchBtn = new QPushButton("Search");
+    connect(keySearchBtn, SIGNAL(clicked()), this, SLOT(searchKeyBtnClickedHandler()));
+    keyDeleteBtn = new QPushButton("Delete");
+    connect(keyDeleteBtn, SIGNAL(clicked()), this, SLOT(deleteKeyBtnClickedHandler()));
+
     QGridLayout *keySearchLayout = new QGridLayout;
     keySearchLayout->addWidget(keySearchLabel, 0, 0);
     keySearchLayout->addWidget(keySearchInput, 0, 1);
     keySearchLayout->addWidget(valFoundLabel, 1, 0);
     keySearchLayout->addWidget(valDisplay, 1, 1);
     keySearchLayout->addWidget(keySearchBtn, 2, 0, 1, 2);
+    keySearchLayout->addWidget(keyDeleteBtn,3,0,1,2);
     keySearchGroup->setLayout(keySearchLayout);
 
     QGroupBox *infoDisplayGroup = new QGroupBox(tr("Info Display"));
@@ -134,6 +143,16 @@ void DHTServer::ftOpenHandler() {
     }
 }
 
+void DHTServer::kvCacheOpenHandler() {
+    displayThisDHT();
+    for (QHash<quint64,QVariantMap>::iterator i = kvCache.begin(); i != kvCache.end(); i++) {
+        infoDisplay->append(QString("Key: %1").arg(i.value()["Key"].toString()));
+        infoDisplay->append(QString("KeyId: %1").arg(i.value()["KeyId"].toUInt()));
+        infoDisplay->append(QString("Origin: %1").arg(i.value()["Origin"].toString()));
+        infoDisplay->append(QString("**************************"));
+    }
+}
+
 void DHTServer::neighboursOpenHandler() {
     displayThisDHT();
     infoDisplay->append(QString("-----------------------------------------------"));
@@ -175,7 +194,6 @@ void DHTServer::bindNetSocket(NetSocket *ns) {
     setWindowFlags(Qt::Dialog | Qt::Desktop);
     initFingerTable();
     displayThisDHT();
-    qDebug()<<fingerTable<<endl;
 }
 
 void DHTServer::initFingerTable() {
@@ -250,14 +268,11 @@ void DHTServer::normalLeave() {
 
             QVariantMap leaveMessFinger;
             leaveMessFinger["updateFinMessage"] = true;
-            leaveMessFinger["Direction"] = "exit";
             leaveMessFinger["Origin"] = localOrigin;
             leaveMessFinger["HashId"] = hashId;
             leaveMessFinger["ServerId"] = serverId;
             leaveMessFinger["Succ"] = successors[0];
-
-            QStringList flist = successors[0]["Origin"].toString().split(":");
-            sendMessage(leaveMessFinger,QHostAddress(flist[0]),flist[1].toUInt());
+            sendMessage(leaveMessFinger,QHostAddress(slist[0]),slist[1].toUInt());
         }
     }
 }
@@ -586,6 +601,79 @@ void DHTServer::receiveMessage() {
             for (int i = 0; i < toRemove.length(); i++) {
                 kvs.remove(toRemove[i]);
             }
+        } else if (receivedMessageMap.contains("KVSearchRequest")) {
+            quint64 keyId = receivedMessageMap["KeyId"].toUInt();
+            if (kvs.find(keyId)!= kvs.end()){
+                QVariantMap kvFoundMessage;
+                kvFoundMessage["FoundKV"] = true;
+                kvFoundMessage["KeyId"] = keyId;
+                kvFoundMessage["Key"] = kvs[keyId]["Key"];
+                kvFoundMessage["Val"] = kvs[keyId]["Val"];
+                kvFoundMessage["KeyHashId"] = kvs[keyId]["KeyHashId"];
+                kvFoundMessage["Origin"] = localOrigin;
+
+                QStringList olist = receivedMessageMap["Origin"].toString().split(":");
+                sendMessage(kvFoundMessage,QHostAddress(olist[0]),olist[1].toUInt());
+            }else if (receivedMessageMap["HopLimit"].toInt() > 0){
+                receivedMessageMap["HopLimit"] = receivedMessageMap["HopLimit"].toInt() - 1;
+                QString successorAddr = searchFinTable(keyId);
+
+                QStringList slist = successorAddr.split(":");
+                sendMessage(receivedMessageMap, QHostAddress(slist[0]), slist[1].toUInt());
+            } else if (receivedMessageMap["HopLimit"].toInt() == 0) {
+                valDisplay->clear();
+            }
+        } else if(receivedMessageMap.contains("KVCacheSearchRequest")) {
+            quint64 keyId = receivedMessageMap["KeyId"].toUInt();
+            if (kvs.find(keyId)!= kvs.end()){
+                QVariantMap kvFoundMessage;
+                kvFoundMessage["FoundKV"] = true;
+                kvFoundMessage["KeyId"] = keyId;
+                kvFoundMessage["Key"] = kvs[keyId]["Key"];
+                kvFoundMessage["Val"] = kvs[keyId]["Val"];
+                kvFoundMessage["KeyHashId"] = kvs[keyId]["KeyHashId"];
+                kvFoundMessage["Origin"] = localOrigin;
+
+                QStringList olist = receivedMessageMap["Origin"].toString().split(":");
+                sendMessage(kvFoundMessage, QHostAddress(olist[0]), olist[1].toUInt());
+            }
+            else {
+                QVariantMap kvCacheDeleteMessage;
+                kvCacheDeleteMessage["KeyDeleted"] = true;
+                kvCacheDeleteMessage["KeyId"] = receivedMessageMap["KeyId"];
+                QStringList slist = receivedMessageMap["Origin"].toString().split(":");
+                sendMessage(kvCacheDeleteMessage, QHostAddress(slist[0]), slist[1].toUInt());
+            }
+        } else if (receivedMessageMap.contains("KeyDeleted")){
+            quint64 keyId = receivedMessageMap["KeyId"].toUInt();
+            kvCache.remove(keyId);
+        } else if (receivedMessageMap.contains("KVDeleteRequest")){
+            quint64 keyId = receivedMessageMap["KeyId"].toUInt();
+
+            if (kvs.find(keyId)!= kvs.end()){
+               kvs.remove(keyId);
+               keysOpenHandler();
+            }
+            else if (receivedMessageMap["HopLimit"].toInt() > 0) {
+                receivedMessageMap["HopLimit"] = receivedMessageMap["HopLimit"].toInt() - 1;
+                QString successorAddr = searchFinTable(keyId);
+
+                QStringList slist = successorAddr.split(":");
+                sendMessage(receivedMessageMap, QHostAddress(slist[0]), slist[1].toUInt());
+            }
+        } else if (receivedMessageMap.contains("FoundKV")) {
+            QString origin = receivedMessageMap["Origin"].toString();
+            quint64 keyId = receivedMessageMap["KeyId"].toUInt();
+            QString val = receivedMessageMap["Val"].toString();
+            valDisplay->clear();
+            valDisplay->setText(val);
+            QVariantMap kv;
+            kv["Origin"] = origin;
+            kv["Key"] = receivedMessageMap["Key"].toString();
+            kv["KeyId"] = keyId;
+            if (kvCache.find(keyId) == kvCache.end()) {
+               kvCache.insert(keyId, kv);
+            }
         }
     }
 }
@@ -612,6 +700,8 @@ void DHTServer::nodeJoinBtnClickedHandler() {
 void DHTServer::keyValInsertionHandler() {
     QString key = keyInsertInput->text().simplified();
     QString val = valInsertInput->text().simplified();
+    keyInsertInput->clear();
+    valInsertInput->clear();
 
     if (key == "" || val == "") {
         return;
@@ -676,22 +766,79 @@ void DHTServer::lookedupHandler(const QHostInfo &host) {
 
 void DHTServer::searchKeyBtnClickedHandler() {
     QString key = keySearchInput->text();
+    QString keyHash = Util::getHashId(key);
+    //keySearchInput->clear();
+    bool ok;
+    quint64 keyId = keyHash.toUInt(&ok,16);
+    if (kvs.find(keyId)!=kvs.end()){
 
-   /* if (foundKeyLocal(key)){
-        kvs[key]
-    };*/
+       valDisplay->clear();
+       valDisplay->setText(kvs[keyId]["Val"].toString());
+    }
+    else if (kvCache.find(keyId) != kvCache.end()){
+        QVariantMap kvSearchMsg;
+        kvSearchMsg["KVCacheSearchRequest"] = true;
+        kvSearchMsg["KeyId"] = keyId;
+        kvSearchMsg["Origin"] = localOrigin;
+
+        QString keyHolder = kvCache[keyId]["Origin"].toString();
+        QStringList hlist = keyHolder.split(":");
+        sendMessage(kvSearchMsg, QHostAddress(hlist[0]), hlist[1].toUInt());
+
+    }else{
+        QVariantMap kvSearchMsg;
+        kvSearchMsg["KVSearchRequest"] = true;
+        kvSearchMsg["KeyId"] = keyId;
+        kvSearchMsg["Origin"] = localOrigin;
+        kvSearchMsg["HopLimit"] = HOP_LIMIT;
+
+        QString successorAddr = searchFinTable(keyId);
+        QStringList slist = successorAddr.split(":");
+        sendMessage(kvSearchMsg, QHostAddress(slist[0]), slist[1].toUInt());
+    }
 }
 
-/*bool DHTServer::foundKeyLocal(quint64 keyId) {
+void DHTServer::deleteKeyBtnClickedHandler() {
+    QString key = keySearchInput->text();
+    QString keyHash = Util::getHashId(key);
+    keySearchInput->clear();
+    valDisplay->clear();
+    bool ok;
+    quint64 keyId = keyHash.toUInt(&ok,16);
+    if (kvs.find(keyId)!=kvs.end()){
 
-    if () {
-
+       valDisplay->clear();
+       valDisplay->setText(kvs[keyId]["Val"].toString());
+       kvs.remove(keyId);
+       keysOpenHandler();
     }
     else {
-        return false;
-    }
+        QVariantMap kvDeleteMsg;
+        kvDeleteMsg["KVDeleteRequest"] = true;
+        kvDeleteMsg["KeyId"] = keyId;
+        kvDeleteMsg["Origin"] = localOrigin;
+        kvDeleteMsg["HopLimit"] = HOP_LIMIT;
 
-}*/
+        QString successorAddr = searchFinTable(keyId);
+        QStringList slist = successorAddr.split(":");
+        sendMessage(kvDeleteMsg, QHostAddress(slist[0]), slist[1].toUInt());
+    }
+}
+
+QString DHTServer::searchFinTable(quint64 keyId) {
+    quint64 currentHop;
+    quint64 nextHop;
+    QString successorAddr;
+    for (int i=0;i<31;i++) {
+        currentHop = fingerTable[i]["HopPoint"].toUInt();
+        nextHop = fingerTable[i+1]["HopPoint"].toUInt();
+        if (keyId>=currentHop && keyId<nextHop) {
+            successorAddr = fingerTable[i]["Origin"].toString();
+            return successorAddr;
+        }
+    }
+    return fingerTable[31]["Origin"].toString();
+}
 
 DHTServer::~DHTServer()
 {

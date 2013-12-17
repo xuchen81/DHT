@@ -29,6 +29,7 @@
 #include <QMenu>
 #include <QAction>
 #define CHORD_RANGE 4294967296
+#define HOP_LIMIT 5
 
 
 namespace Ui {
@@ -65,6 +66,7 @@ public:
 public slots:
     void keyValInsertionHandler();
     void nodeJoinBtnClickedHandler();
+    void deleteKeyBtnClickedHandler();
     void searchKeyBtnClickedHandler();
     void lookedupHandler(const QHostInfo &host);
     void receiveMessage();
@@ -76,6 +78,8 @@ public slots:
     void neighboursOpenHandler();
     void keysOpenHandler();
     void ftOpenHandler();
+    void kvCacheOpenHandler();
+    QString searchFinTable(quint64 keyId);
 
     
 private:
@@ -93,6 +97,7 @@ private:
     QLineEdit *keySearchInput;
     QLineEdit *valDisplay;
     QPushButton *keySearchBtn;
+    QPushButton *keyDeleteBtn;
     QTextEdit *infoDisplay;
 
     /* Neighbours. */
@@ -101,6 +106,9 @@ private:
 
     /* Key storage. */
     QHash<quint64, QVariantMap> kvs;
+
+    /*Local KV Cache.*/
+    QHash<quint64,QVariantMap> kvCache;
 
     /* Fingertable. */
     QHash<quint64,QVariantMap> fingerTable;
