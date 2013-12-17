@@ -525,20 +525,19 @@ void DHTServer::receiveMessage() {
             node["Direction"] = receivedMessageMap["Direction"];
             qDebug()<<"***********UpdateNewFinMessage**********"<<endl;
             updateFingerTable(node);
-        } else if (receivedMessageMap.contains("UpdateFinMessage") && (receivedMessageMap["Direction"]== "exit")) {
+        } else if (receivedMessageMap.contains("UpdateFTNodeLeave")) {
             QVariantMap node;
             node["Origin"] = receivedMessageMap["Origin"];
             node["HashId"] = receivedMessageMap["HashId"];
             node["ServerId"] = receivedMessageMap["ServerId"];
-            node["Direction"] = receivedMessageMap["Direction"];
+            node["Direction"] = "exit";
             node["Succ"] = receivedMessageMap["Succ"];
 
             updateFingerTable(node);
-            if (successors[0]["Origin"].toString() != node["Succ"].toMap()["Origin"].toString()) {
+            if (!successors.isEmpty()&& successors[0]["Origin"].toString() != node["Succ"].toMap()["Origin"].toString()) {
                 QStringList flist = successors[0]["Origin"].toString().split(":");
                 sendMessage(receivedMessageMap,QHostAddress(flist[0]), flist[1].toUInt());
             }
-
         } else if (receivedMessageMap.contains("NodeExit") && receivedMessageMap.contains("UpdateNeighbsToEmpty")) {
             successors.clear();
             predecessors.clear();
