@@ -126,7 +126,7 @@ void DHTServer::keysOpenHandler() {
         infoDisplay->append(QString("KeyHashId: %1").arg(i.value()["KeyHashId"].toString()));
         infoDisplay->append(QString("KeyId: %1").arg(i.value()["KeyId"].toUInt()));
         infoDisplay->append(QString("Key => Val: %1 => %2").arg(i.value()["Key"].toString()).arg(i.value()["Val"].toString()));
-        infoDisplay->append("*************************************");
+        infoDisplay->append("*****************************");
     }
 }
 
@@ -267,7 +267,7 @@ void DHTServer::normalLeave() {
             spreadKeysToNeighbours();
 
             QVariantMap leaveMessFinger;
-            leaveMessFinger["updateFinMessage"] = true;
+            leaveMessFinger["UpdateFinMessage"] = true;
             leaveMessFinger["Origin"] = localOrigin;
             leaveMessFinger["HashId"] = hashId;
             leaveMessFinger["ServerId"] = serverId;
