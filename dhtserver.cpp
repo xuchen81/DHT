@@ -267,7 +267,7 @@ void DHTServer::normalLeave() {
             spreadKeysToNeighbours();
 
             QVariantMap leaveMessFinger;
-            leaveMessFinger["UpdateFinMessage"] = true;
+            leaveMessFinger["UpdateFTNodeLeave"] = true;
             leaveMessFinger["Origin"] = localOrigin;
             leaveMessFinger["HashId"] = hashId;
             leaveMessFinger["ServerId"] = serverId;
