@@ -280,7 +280,7 @@ void DHTServer::normalLeave() {
 void DHTServer::closeEvent(QCloseEvent *event) {
     QMessageBox msgBox;
     msgBox.setText("Are you sure you want to close this DHT server?");
-    msgBox.setStandardButtons(QMessageBox::Close | QMessageBox::Cancel);
+    msgBox.setStandardButtons(QMessageBox::Close);
     msgBox.setDefaultButton(QMessageBox::Close);
     int result = msgBox.exec();
     switch (result) {
@@ -646,6 +646,7 @@ void DHTServer::receiveMessage() {
         } else if (receivedMessageMap.contains("KeyDeleted")){
             quint64 keyId = receivedMessageMap["KeyId"].toUInt();
             kvCache.remove(keyId);
+            kvCacheOpenHandler();
         } else if (receivedMessageMap.contains("KVDeleteRequest")){
             quint64 keyId = receivedMessageMap["KeyId"].toUInt();
 
